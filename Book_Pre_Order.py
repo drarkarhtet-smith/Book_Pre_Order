@@ -57,7 +57,7 @@ st.markdown(
     </style>
 
     <div class="book-header">
-        <div class="book-title-mm">စီးပွားရေးအတိုင်ပင်ခံလျှို့ဝှက်လက်စွဲ</div>
+        <div class="book-title-mm">စီးပွါးရေးအတိုင်ပင်ခံ လျှို့ဝှက်လက်စွဲ</div>
         <div class="book-title-en">The Secret Handbook for Business Consultants</div>
         <div class="book-author">စာရေးသူ: Dr. Yin Hlaing Min</div>
     </div>
@@ -103,6 +103,7 @@ def upload_to_drive(file_obj, filename):
 with st.form("preorder_form", clear_on_submit=True):
     name = st.text_input("အမည်")
     phone = st.text_input("ဖုန်းနံပါတ်")
+    email = st.text_input("အီးမေးလ်")
     qty = st.number_input("မှာယူမည့်အရေအတွက်", min_value=1, step=1)
 
     book_option = st.radio("ဝယ်ယူမည့် Package", list(BOOK_OPTIONS.keys()))
@@ -125,7 +126,7 @@ with st.form("preorder_form", clear_on_submit=True):
     submitted = st.form_submit_button("Order တင်မည်")
 
     if submitted:
-        if not name or not phone or not slip:
+        if not name or not phone or not email or not slip:
             st.error("အချက်အလက်အားလုံး (Slip အပါအဝင်) ဖြည့်ပေးပါ။")
         elif delivery_type == "Delivery ဖြင့်ပို့ရန်" and not address:
             st.error("လိပ်စာဖြည့်ပေးပါရန်။")
@@ -145,6 +146,7 @@ with st.form("preorder_form", clear_on_submit=True):
                         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         name,
                         phone,
+                        email,
                         qty,
                         book_option,
                         unit_price,
