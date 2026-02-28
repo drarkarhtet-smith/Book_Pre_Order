@@ -20,15 +20,50 @@ try:
 except Exception:
     st.warning("Book cover image not found. Please add `book.png` in this folder.")
 
-try:
-    st.image("logo.png", width=200)
-except Exception:
-    pass
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Sans+Myanmar:wght@500;700&display=swap');
 
-st.title("📚 The Secret Handbook for Business Consultants")
-st.markdown("## စီးပွားရေးအတိုင်ပင်ခံလုပ်ငန်းလက်စွဲ")
-st.markdown("### **စာရေးသူ:** Dr. Yin Hlaing Min")
-st.markdown("---")
+    .book-header {
+        text-align: center;
+        margin-top: 0.5rem;
+        margin-bottom: 1.2rem;
+        padding: 0.3rem 0.5rem 0.8rem 0.5rem;
+        border-bottom: 2px solid #5aa8c6;
+    }
+    .book-title-mm {
+        font-family: 'Noto Sans Myanmar', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #148fbe;
+        margin-bottom: 0.35rem;
+    }
+    .book-title-en {
+        font-family: 'Cinzel', serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        color: #0d6f98;
+        margin-bottom: 0.45rem;
+        text-transform: uppercase;
+    }
+    .book-author {
+        font-family: 'Noto Sans Myanmar', sans-serif;
+        font-size: 1.25rem;
+        color: #2f3a40;
+        font-weight: 600;
+    }
+    </style>
+
+    <div class="book-header">
+        <div class="book-title-mm">စီးပွားရေးအတိုင်ပင်ခံလုပ်ငန်းလက်စွဲ</div>
+        <div class="book-title-en">The Secret Handbook for Business Consultants</div>
+        <div class="book-author">စာရေးသူ: Dr. Yin Hlaing Min</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # --- Google Services Setup ---
@@ -78,6 +113,9 @@ with st.form("preorder_form", clear_on_submit=True):
     delivery_type = st.radio(
         "လက်ခံယူမည့်ပုံစံ", ["မိတ်ဆက်ပွဲတွင် ယူမည်", "Delivery ဖြင့်ပို့ရန်"]
     )
+
+    st.markdown("### ငွေပေးချေရန် အချက်အလက်")
+    st.info("K Pay Number: 09420064987 (Yin Hlaing Min)")
 
     address = ""
     if delivery_type == "Delivery ဖြင့်ပို့ရန်":
