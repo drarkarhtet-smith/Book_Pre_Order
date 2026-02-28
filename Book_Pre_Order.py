@@ -57,7 +57,7 @@ st.markdown(
     </style>
 
     <div class="book-header">
-        <div class="book-title-mm">စီးပွားရေးအတိုင်ပင်ခံလုပ်ငန်းလက်စွဲ</div>
+        <div class="book-title-mm">စီးပွားရေးအတိုင်ပင်ခံလျှို့ဝှက်လက်စွဲ</div>
         <div class="book-title-en">The Secret Handbook for Business Consultants</div>
         <div class="book-author">စာရေးသူ: Dr. Yin Hlaing Min</div>
     </div>
