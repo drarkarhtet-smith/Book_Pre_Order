@@ -1,4 +1,6 @@
 import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 import smtplib
 from email.message import EmailMessage
@@ -14,11 +16,7 @@ BOOK_OPTIONS = {
 
 # --- UI Header ---
 try:
-    # New Streamlit prefers width="stretch"; fallback keeps compatibility.
-    try:
-        st.image("book.png", width="stretch")
-    except TypeError:
-        st.image("book.png", use_container_width=True)
+    st.image("book.png", width="stretch")
 except Exception:
     st.warning("Book cover image not found. Please add `book.png` in this folder.")
 
@@ -68,7 +66,16 @@ st.markdown(
 )
 
 
-# --- Google Services Setup --
+# --- Google Services Setup ---
+def get_sheets_client():
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(
+        creds_dict,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"],
+    )
+    return gspread.authorize(creds)
+
+
 def send_slip_email(
     file_obj,
     attachment_name,
@@ -89,16 +96,13 @@ def send_slip_email(
             "Missing Streamlit secrets for email: " + ", ".join(missing_keys)
         )
 
-    smtp_host = st.secrets.get("smtp_host", "smtp.gmail.com")
-    smtp_port = int(st.secrets.get("smtp_port", 465))
     smtp_user = st.secrets["smtp_user"]
     smtp_password = st.secrets["smtp_password"]
     recipient_email = st.secrets["recipient_email"]
-    smtp_sender = st.secrets.get("smtp_sender", smtp_user)
 
     message = EmailMessage()
     message["Subject"] = f"Book Pre-Order Slip: {name} ({phone})"
-    message["From"] = smtp_sender
+    message["From"] = smtp_user
     message["To"] = recipient_email
     message["Reply-To"] = email
     message.set_content(
@@ -134,7 +138,7 @@ def send_slip_email(
         filename=attachment_name,
     )
 
-    with smtplib.SMTP_SSL(smtp_host, smtp_port) as smtp:
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(smtp_user, smtp_password)
         smtp.send_message(message)
 
@@ -214,7 +218,7 @@ with st.form("preorder_form", clear_on_submit=False):
                         total_price,
                         delivery_type,
                         address,
-                        f"Sent to {recipient_email} ({filename})",
+                        f"Payment slip emailed ({filename})",
                         "Pending Verification",
                     ]
                     sheet.append_row(row)
