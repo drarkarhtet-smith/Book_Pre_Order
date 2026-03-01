@@ -12,7 +12,6 @@ BOOK_OPTIONS = {
     "Option 1 - Hard Copy Only (60,000 MMK)": 60000,
     "Option 2 - Hard Copy + Soft Copy + Training (100,000 MMK)": 100000,
 }
-ADMIN_EMAIL = "dr.arkarhtet@gmail.com"
 
 
 # --- UI Header ---
@@ -94,23 +93,24 @@ def send_slip_email(
     delivery_type,
     address,
 ):
-    required_secret_keys = ["smtp_host", "smtp_user", "smtp_password"]
+    required_secret_keys = ["smtp_user", "smtp_password", "recipient_email"]
     missing_keys = [key for key in required_secret_keys if key not in st.secrets]
     if missing_keys:
         raise RuntimeError(
             "Missing Streamlit secrets for email: " + ", ".join(missing_keys)
         )
 
-    smtp_host = st.secrets["smtp_host"]
+    smtp_host = st.secrets.get("smtp_host", "smtp.gmail.com")
     smtp_port = int(st.secrets.get("smtp_port", 465))
     smtp_user = st.secrets["smtp_user"]
     smtp_password = st.secrets["smtp_password"]
+    recipient_email = st.secrets["recipient_email"]
     smtp_sender = st.secrets.get("smtp_sender", smtp_user)
 
     message = EmailMessage()
     message["Subject"] = f"Book Pre-Order Slip: {name} ({phone})"
     message["From"] = smtp_sender
-    message["To"] = ADMIN_EMAIL
+    message["To"] = recipient_email
     message["Reply-To"] = email
     message.set_content(
         "\n".join(
@@ -149,6 +149,8 @@ def send_slip_email(
         smtp.login(smtp_user, smtp_password)
         smtp.send_message(message)
 
+    return recipient_email
+
 
 # --- Main Form ---
 with st.form("preorder_form", clear_on_submit=False):
@@ -166,7 +168,10 @@ with st.form("preorder_form", clear_on_submit=False):
         "လက်ခံယူမည့်ပုံစံ", ["မိတ်ဆက်ပွဲတွင် ယူမည်", "Delivery ဖြင့်ပို့ရန်"]
     )
 
-    st.markdown("### ငွေပေးချေရန် အချက်အလက်")
+    st.markdown(
+        "<p style='font-size:1rem;font-weight:600;margin:0.2rem 0;'>ငွေပေးချေရန် အချက်အလက်</p>",
+        unsafe_allow_html=True,
+    )
     st.info("K Pay Number: 09420064987 (Yin Hlaing Min)")
 
     address = ""
@@ -193,7 +198,7 @@ with st.form("preorder_form", clear_on_submit=False):
                         f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
                         f"_{name}_{phone}_slip.{file_ext}"
                     )
-                    send_slip_email(
+                    recipient_email = send_slip_email(
                         file_obj=slip,
                         attachment_name=filename,
                         name=name,
@@ -220,7 +225,7 @@ with st.form("preorder_form", clear_on_submit=False):
                         total_price,
                         delivery_type,
                         address,
-                        f"Sent to {ADMIN_EMAIL} ({filename})",
+                        f"Sent to {recipient_email} ({filename})",
                         "Pending Verification",
                     ]
                     sheet.append_row(row)
