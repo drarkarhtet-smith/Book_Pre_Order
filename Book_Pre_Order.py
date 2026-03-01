@@ -1,10 +1,9 @@
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
 from datetime import datetime
-import io
+import smtplib
+from email.message import EmailMessage
 
 # Page Configuration
 st.set_page_config(page_title="Book Order", page_icon="📚")
@@ -13,6 +12,7 @@ BOOK_OPTIONS = {
     "Option 1 - Hard Copy Only (60,000 MMK)": 60000,
     "Option 2 - Hard Copy + Soft Copy + Training (100,000 MMK)": 100000,
 }
+ADMIN_EMAIL = "dr.arkarhtet@gmail.com"
 
 
 # --- UI Header ---
@@ -76,34 +76,78 @@ def get_sheets_client():
     creds_dict = st.secrets["gcp_service_account"]
     creds = Credentials.from_service_account_info(
         creds_dict,
-        scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.file",
-        ],
+        scopes=["https://www.googleapis.com/auth/spreadsheets"],
     )
     return gspread.authorize(creds)
 
 
-def upload_to_drive(file_obj, filename):
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=["https://www.googleapis.com/auth/drive"],
-    )
-    drive_service = build("drive", "v3", credentials=creds)
+def send_slip_email(
+    file_obj,
+    attachment_name,
+    name,
+    phone,
+    email,
+    qty,
+    book_option,
+    unit_price,
+    total_price,
+    delivery_type,
+    address,
+):
+    required_secret_keys = ["smtp_host", "smtp_user", "smtp_password"]
+    missing_keys = [key for key in required_secret_keys if key not in st.secrets]
+    if missing_keys:
+        raise RuntimeError(
+            "Missing Streamlit secrets for email: " + ", ".join(missing_keys)
+        )
 
-    file_metadata = {"name": filename, "parents": [st.secrets["FOLDER_ID"]]}
-    # Use an in-memory copy to avoid stale temporary upload references.
-    media_buffer = io.BytesIO(file_obj.getvalue())
-    media = MediaIoBaseUpload(
-        media_buffer,
-        mimetype=getattr(file_obj, "type", None) or "application/octet-stream",
+    smtp_host = st.secrets["smtp_host"]
+    smtp_port = int(st.secrets.get("smtp_port", 465))
+    smtp_user = st.secrets["smtp_user"]
+    smtp_password = st.secrets["smtp_password"]
+    smtp_sender = st.secrets.get("smtp_sender", smtp_user)
+
+    message = EmailMessage()
+    message["Subject"] = f"Book Pre-Order Slip: {name} ({phone})"
+    message["From"] = smtp_sender
+    message["To"] = ADMIN_EMAIL
+    message["Reply-To"] = email
+    message.set_content(
+        "\n".join(
+            [
+                "New book pre-order submitted.",
+                f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"Customer Name: {name}",
+                f"Phone: {phone}",
+                f"Customer Email: {email}",
+                f"Quantity: {qty}",
+                f"Package: {book_option}",
+                f"Unit Price: {unit_price:,} MMK",
+                f"Total Price: {total_price:,} MMK",
+                f"Delivery Type: {delivery_type}",
+                f"Address: {address if address else '-'}",
+                "",
+                "Payment slip is attached.",
+            ]
+        )
     )
-    file = (
-        drive_service.files()
-        .create(body=file_metadata, media_body=media, fields="webViewLink")
-        .execute()
+
+    mime_type = getattr(file_obj, "type", "") or "application/octet-stream"
+    if "/" in mime_type:
+        maintype, subtype = mime_type.split("/", 1)
+    else:
+        maintype, subtype = "application", "octet-stream"
+
+    message.add_attachment(
+        file_obj.getvalue(),
+        maintype=maintype,
+        subtype=subtype,
+        filename=attachment_name,
     )
-    return file.get("webViewLink")
+
+    with smtplib.SMTP_SSL(smtp_host, smtp_port) as smtp:
+        smtp.login(smtp_user, smtp_password)
+        smtp.send_message(message)
 
 
 # --- Main Form ---
@@ -149,7 +193,19 @@ with st.form("preorder_form", clear_on_submit=False):
                         f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
                         f"_{name}_{phone}_slip.{file_ext}"
                     )
-                    file_link = upload_to_drive(slip, filename)
+                    send_slip_email(
+                        file_obj=slip,
+                        attachment_name=filename,
+                        name=name,
+                        phone=phone,
+                        email=email,
+                        qty=qty,
+                        book_option=book_option,
+                        unit_price=unit_price,
+                        total_price=total_price,
+                        delivery_type=delivery_type,
+                        address=address,
+                    )
 
                     client = get_sheets_client()
                     sheet = client.open("PreOrderDatabase").sheet1
@@ -164,11 +220,14 @@ with st.form("preorder_form", clear_on_submit=False):
                         total_price,
                         delivery_type,
                         address,
-                        file_link,
+                        f"Sent to {ADMIN_EMAIL} ({filename})",
+                        "Pending Verification",
                     ]
                     sheet.append_row(row)
 
-                    st.success("သင်၏ အော်ဒါကို အောင်မြင်စွာ လက်ခံရရှိပါပြီ။ ကျေးဇူးတင်ပါသည်။")
+                    st.success(
+                        "Order ကို လက်ခံရရှိပါပြီ။ Payment slip ကို စစ်ဆေးပြီးနောက် အတည်ပြုချက် ပြန်လည်ပေးပို့ပါမည်။"
+                    )
                     st.balloons()
                 except Exception as e:
                     st.error(f"Error ဖြစ်သွားပါသည်: {e}")
