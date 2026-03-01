@@ -4,6 +4,7 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from datetime import datetime
+import io
 
 # Page Configuration
 st.set_page_config(page_title="Book Order", page_icon="📚")
@@ -16,7 +17,11 @@ BOOK_OPTIONS = {
 
 # --- UI Header ---
 try:
-    st.image("book.png", use_container_width=True)
+    # New Streamlit prefers width="stretch"; fallback keeps compatibility.
+    try:
+        st.image("book.png", width="stretch")
+    except TypeError:
+        st.image("book.png", use_container_width=True)
 except Exception:
     st.warning("Book cover image not found. Please add `book.png` in this folder.")
 
@@ -87,8 +92,10 @@ def upload_to_drive(file_obj, filename):
     drive_service = build("drive", "v3", credentials=creds)
 
     file_metadata = {"name": filename, "parents": [st.secrets["FOLDER_ID"]]}
+    # Use an in-memory copy to avoid stale temporary upload references.
+    media_buffer = io.BytesIO(file_obj.getvalue())
     media = MediaIoBaseUpload(
-        file_obj,
+        media_buffer,
         mimetype=getattr(file_obj, "type", None) or "application/octet-stream",
     )
     file = (
@@ -100,7 +107,7 @@ def upload_to_drive(file_obj, filename):
 
 
 # --- Main Form ---
-with st.form("preorder_form", clear_on_submit=True):
+with st.form("preorder_form", clear_on_submit=False):
     name = st.text_input("အမည်")
     phone = st.text_input("ဖုန်းနံပါတ်")
     email = st.text_input("အီးမေးလ်")
@@ -122,7 +129,11 @@ with st.form("preorder_form", clear_on_submit=True):
     if delivery_type == "Delivery ဖြင့်ပို့ရန်":
         address = st.text_area("ပို့ပေးရမည့်လိပ်စာ")
 
-    slip = st.file_uploader("ငွေလွှဲ Slip ပုံတင်ရန်", type=["jpg", "png", "jpeg"])
+    slip = st.file_uploader(
+        "ငွေလွှဲ Slip ပုံတင်ရန်",
+        type=["jpg", "png", "jpeg"],
+        key="payment_slip",
+    )
     submitted = st.form_submit_button("Order တင်မည်")
 
     if submitted:
