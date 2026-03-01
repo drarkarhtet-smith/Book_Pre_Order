@@ -1,6 +1,4 @@
 import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
 from datetime import datetime
 import smtplib
 from email.message import EmailMessage
@@ -70,16 +68,7 @@ st.markdown(
 )
 
 
-# --- Google Services Setup ---
-def get_sheets_client():
-    creds_dict = st.secrets["gcp_service_account"]
-    creds = Credentials.from_service_account_info(
-        creds_dict,
-        scopes=["https://www.googleapis.com/auth/spreadsheets"],
-    )
-    return gspread.authorize(creds)
-
-
+# --- Google Services Setup --
 def send_slip_email(
     file_obj,
     attachment_name,
